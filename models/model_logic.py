@@ -17,7 +17,7 @@ from xgboost import XGBClassifier
 # Project root and paths for saved models (used by run_model)
 _MODEL_LOGIC_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = _MODEL_LOGIC_DIR.parent
-SAVED_MODELS_DIR = PROJECT_ROOT / "saved_models"
+SAVED_MODELS_DIR = _MODEL_LOGIC_DIR  # same directory as this file (models/)
 MODEL_NAME_TO_PKL = {
     "Logistic Regression": "logistic_regression.pkl",
     "Decision Tree": "decision_tree.pkl",

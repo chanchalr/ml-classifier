@@ -19,7 +19,7 @@ from models.model_logic import get_model, MODEL_NAME_TO_PKL, apply_feature_engin
 # Paths (relative to project root)
 PROJECT_ROOT = Path(__file__).resolve().parent
 DATA_PATH = PROJECT_ROOT / "dataset" / "bank_full.csv"
-SAVED_DIR = PROJECT_ROOT / "saved_models"
+SAVED_DIR = PROJECT_ROOT / "models"
 TEST_CSV_PATH = PROJECT_ROOT / "test.csv"
 TARGET_COL = "y"
 
