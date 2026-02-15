@@ -18,25 +18,25 @@ MODEL_NAMES = [
 DATASET_DIR = Path(__file__).resolve().parent / "dataset"
 
 def add_dataset_mgmt_sidebar():
+    """Sidebar: download buttons for CSVs in dataset/."""
     st.sidebar.title("🔍 Dataset Management")
-
-    # List & download CSVs from dataset directory
-    if DATASET_DIR.exists():
-        st.sidebar.subheader("📁 Datasets in folder")
-        csv_files = sorted(DATASET_DIR.glob("*.csv"))
-        for path in csv_files:
-            data = path.read_bytes()
-            st.sidebar.download_button(
-                label=f"⬇️ {path.name}",
-                data=data,
-                file_name=path.name,
-                mime="text/csv",
-                key=f"download_{path.name}",
-            )
-        if not csv_files:
-            st.sidebar.caption("No CSV files in dataset/")
-    else:
+    if not DATASET_DIR.exists():
         st.sidebar.caption("dataset/ directory not found.")
+        return
+    csv_files = sorted(DATASET_DIR.glob("*.csv"))
+    if not csv_files:
+        st.sidebar.caption("No CSV files in dataset/")
+        return
+    st.sidebar.subheader("⬇️ Download CSV")
+    for path in csv_files:
+        data = path.read_bytes()
+        st.sidebar.download_button(
+            label=path.name,
+            data=data,
+            file_name=path.name,
+            mime="text/csv",
+            key=f"download_{path.name}",
+        )
 
 
 def main():
@@ -56,18 +56,48 @@ def main():
 
     add_dataset_mgmt_sidebar()
 
-    # Run pipeline on uploaded file (upload in main area)
-    st.subheader("Run pipeline on uploaded file")
-    uploaded = st.file_uploader("Upload a CSV to run pipeline", type=["csv"], key="dataset_upload")
+    # Run pipeline: select dataset from folder or upload a CSV
+    st.subheader("Run pipeline")
+    csv_files = sorted(DATASET_DIR.glob("*.csv")) if DATASET_DIR.exists() else []
+    options = ["(None)"] + [p.name for p in csv_files]
+    selected_df = None
+    selected_name = None
     uploaded_df = None
-    if uploaded is not None:
-        try:
-            uploaded_df = pd.read_csv(uploaded)
-            st.success(f"Loaded {len(uploaded_df)} rows × {len(uploaded_df.columns)} cols")
-        except Exception as e:
-            st.error(f"Could not load CSV: {e}")
 
-    if uploaded_df is not None:
+    col_left, col_or, col_right = st.columns([2, 1, 2])
+    with col_left:
+        uploaded = st.file_uploader("Upload a CSV", type=["csv"], key="dataset_upload")
+        if uploaded is not None:
+            try:
+                uploaded_df = pd.read_csv(uploaded)
+                st.success(f"{len(uploaded_df)} rows × {len(uploaded_df.columns)} cols")
+            except Exception as e:
+                st.error(f"Could not load CSV: {e}")
+    with col_or:
+        st.markdown("<div style='text-align: center; padding: 2rem 0;'><strong>or</strong></div>", unsafe_allow_html=True)
+    with col_right:
+        selected = st.selectbox(
+            "Select dataset from folder",
+            options=options,
+            key="run_dataset_select",
+        )
+        if selected != "(None)" and csv_files:
+            path = DATASET_DIR / selected
+            try:
+                selected_df = pd.read_csv(path)
+                selected_name = path.name
+                st.caption(f"**{selected_name}** — {len(selected_df)} rows × {len(selected_df.columns)} cols")
+            except Exception as e:
+                st.error(f"Could not load {selected}: {e}")
+        # Spacer so this column height matches the uploader drop zone (~120px)
+        st.markdown("<div style='height: 90px;'></div>", unsafe_allow_html=True)
+
+    # Prefer uploaded file; otherwise use selected dataset from folder
+    active_df = uploaded_df if uploaded_df is not None else selected_df
+    active_source = "uploaded file" if uploaded_df is not None else (f"dataset/{selected_name}" if selected_name else None)
+
+    if active_df is not None:
+        st.caption(f"Using: **{active_source}** ({len(active_df)} rows)")
         model_choice = st.selectbox("Model", MODEL_NAMES, key="model_choice")
         run_all = st.checkbox("Run all models and compare metrics", key="run_all_models")
 
@@ -78,7 +108,7 @@ def main():
                     for name in MODEL_NAMES:
                         try:
                             metrics, cm, y_test, y_pred = run_pipeline(
-                                uploaded_df.copy(), target_col="y", model_name=name
+                                active_df.copy(), target_col="y", model_name=name
                             )
                             all_metrics.append({"Model": name, **metrics})
                         except Exception as e:
@@ -90,7 +120,7 @@ def main():
                 with st.spinner("Running pipeline…"):
                     try:
                         metrics, cm, y_test, y_pred = run_pipeline(
-                            uploaded_df.copy(), target_col="y", model_name=model_choice
+                            active_df.copy(), target_col="y", model_name=model_choice
                         )
                         st.session_state.last_metrics = metrics
                         st.session_state.last_cm = cm
@@ -117,7 +147,7 @@ def main():
                 st.pyplot(fig)
                 plt.close()
     else:
-        st.info("Upload a CSV above to run the pipeline and see metrics.")
+        st.info("Select a dataset above or upload a CSV to run the pipeline.")
 
 
 if __name__ == "__main__":
