@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelEncoder
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix, matthews_corrcoef
 from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.neighbors import KNeighborsClassifier
@@ -72,6 +72,7 @@ def run_pipeline(df, target_col='y', model_name='XGBoost'):
         "Precision": precision_score(y_test, y_pred, average='weighted'),
         "Recall": recall_score(y_test, y_pred, average='weighted'),
         "F1": f1_score(y_test, y_pred, average='weighted'),
+        "MCC": matthews_corrcoef(y_test, y_pred),
     }
     
     if len(np.unique(y)) == 2:
