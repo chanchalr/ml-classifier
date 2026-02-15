@@ -54,3 +54,14 @@ Metrics from running all models on the full Bank Marketing dataset (train/test s
 | Naive Bayes         | 0.8569   | 0.8151| 0.8652    | 0.8569 | 0.8608| 0.3639|
 | Random Forest       | 0.9037   | 0.9261| 0.8914    | 0.9037 | 0.8930| 0.4697|
 | XGBoost             | 0.9069   | 0.9297| 0.8992    | 0.9069 | 0.9017| 0.5195|
+
+### Observations on model performance
+
+| ML Model Name       | Observation about model performance | Possible reasons |
+|---------------------|--------------------------------------|------------------|
+| Logistic Regression | Strong overall: high accuracy and AUC with balanced precision–recall. MCC (0.43) is moderate. Interpretable and stable baseline. | Linear decision boundary fits the separable structure in the data; L2 regularisation limits overfitting; moderate MCC possibly due to imbalanced classes (minority “yes” is harder to predict well). |
+| Decision Tree       | Lowest AUC (0.71); probability rankings are weak. Accuracy is reasonable but less reliable for ranking or threshold tuning. | Tree outputs are step-like, so probability estimates are poorly calibrated; single tree possibly overfits to training splits |
+| K-Nearest Neighbor  | Good accuracy and recall; AUC is mid-range. Lower MCC suggests sensitivity to class imbalance. | Majority class in the neighbourhood can dominate the vote; choice of k and distance metric affects bias–variance |
+| Naive Bayes         | Lowest accuracy and MCC; fast to train but weaker discriminative performance. | Strong independence assumption between features is violated (e.g. job, education, balance are related); Gaussian assumption may not match feature distributions; prior dominated by majority class. |
+| Random Forest       | High accuracy and second-best AUC; MCC (0.47) indicates good performance on the minority class. Robust. | Averaging many trees reduces variance and overfitting; bootstrap + feature subsampling increases diversity; ensemble probabilities are smoother than a single tree. |
+| XGBoost             | Best overall: top accuracy, highest AUC (0.93) and MCC (0.52). Best balance of precision, recall and ranking. | Sequential boosting corrects errors ; regularisation controls overfitting; handles mixed and non-linear relationships and imbalance effectively. |
