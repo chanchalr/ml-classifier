@@ -39,3 +39,18 @@ The project uses the **Bank Marketing** dataset from the [UCI Machine Learning R
 | `poutcome`  | Outcome of previous marketing campaign |
 
 The full dataset can be downloaded and split into batches using the `prepare_data.py` script.
+
+---
+
+## Results (full dataset)
+
+Metrics from running all models on the full Bank Marketing dataset (train/test split 80/20, default pipeline).
+
+| ML Model Name       | Accuracy | AUC   | Precision | Recall | F1    | MCC   |
+|---------------------|----------|-------|-----------|--------|-------|-------|
+| Logistic Regression | 0.8988   | 0.9046| 0.8838    | 0.8988 | 0.8846| 0.4250|
+| Decision Tree       | 0.8752   | 0.7107| 0.8764    | 0.8752 | 0.8758| 0.4174|
+| K-Nearest Neighbor  | 0.8933   | 0.8296| 0.8766    | 0.8933 | 0.8795| 0.3973|
+| Naive Bayes         | 0.8569   | 0.8151| 0.8652    | 0.8569 | 0.8608| 0.3639|
+| Random Forest       | 0.9037   | 0.9261| 0.8914    | 0.9037 | 0.8930| 0.4697|
+| XGBoost             | 0.9069   | 0.9297| 0.8992    | 0.9069 | 0.9017| 0.5195|
