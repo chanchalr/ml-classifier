@@ -1,7 +1,7 @@
-"""Bank Marketing ML: dataset management, run_pipeline, and metrics."""
+"""Bank Marketing ML: dataset management, run_model (saved models), and metrics."""
 import pandas as pd
 from pathlib import Path
-from models.model_logic import run_pipeline, get_model
+from models.model_logic import run_model, run_pipeline
 import streamlit as st
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -56,8 +56,8 @@ def main():
 
     add_dataset_mgmt_sidebar()
 
-    # Run pipeline: select dataset from folder or upload a CSV
-    st.subheader("Run pipeline")
+    # Run model: select dataset from folder or upload a CSV (evaluates with saved models)
+    st.subheader("Run model")
     csv_files = sorted(DATASET_DIR.glob("*.csv")) if DATASET_DIR.exists() else []
     options = ["(None)"] + [p.name for p in csv_files]
     selected_df = None
@@ -101,25 +101,27 @@ def main():
         model_choice = st.selectbox("Model", MODEL_NAMES, key="model_choice")
         run_all = st.checkbox("Run all models and compare metrics", key="run_all_models")
 
-        if st.button("Run pipeline", key="run_pipeline_btn"):
+        if st.button("Run model", key="run_model_btn"):
             if run_all:
                 all_metrics = []
                 with st.spinner("Running all models…"):
                     for name in MODEL_NAMES:
                         try:
-                            metrics, cm, y_test, y_pred = run_pipeline(
+                            metrics, cm, y_test, y_pred = run_model(
                                 active_df.copy(), target_col="y", model_name=name
                             )
                             all_metrics.append({"Model": name, **metrics})
+                        except FileNotFoundError as e:
+                            all_metrics.append({"Model": name, "Error": "Saved models not found. Run generate_models.py first."})
                         except Exception as e:
                             all_metrics.append({"Model": name, "Error": str(e)})
                 st.session_state.upload_metrics_list = all_metrics
                 st.session_state.last_metrics = None
                 st.session_state.last_cm = None
             else:
-                with st.spinner("Running pipeline…"):
+                with st.spinner("Running model…"):
                     try:
-                        metrics, cm, y_test, y_pred = run_pipeline(
+                        metrics, cm, y_test, y_pred = run_model(
                             active_df.copy(), target_col="y", model_name=model_choice
                         )
                         st.session_state.last_metrics = metrics
@@ -128,8 +130,10 @@ def main():
                         st.session_state.last_y_pred = y_pred
                         st.session_state.last_model_name = model_choice
                         st.session_state.upload_metrics_list = None
+                    except FileNotFoundError:
+                        st.error("Saved models not found. Run generate_models.py first.")
                     except Exception as e:
-                        st.error(f"Pipeline error: {e}")
+                        st.error(f"Error: {e}")
 
         # Display collected metrics
         if st.session_state.upload_metrics_list:
@@ -147,7 +151,7 @@ def main():
                 st.pyplot(fig)
                 plt.close()
     else:
-        st.info("Select a dataset above or upload a CSV to run the pipeline.")
+        st.info("Select a dataset above or upload a CSV to run the saved model.")
 
 
 if __name__ == "__main__":

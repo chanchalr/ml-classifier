@@ -1,3 +1,7 @@
+import json
+import pickle
+from pathlib import Path
+
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
@@ -9,6 +13,19 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import RandomForestClassifier
 from xgboost import XGBClassifier
+
+# Project root and paths for saved models (used by run_model)
+_MODEL_LOGIC_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = _MODEL_LOGIC_DIR.parent
+SAVED_MODELS_DIR = PROJECT_ROOT / "saved_models"
+MODEL_NAME_TO_PKL = {
+    "Logistic Regression": "logistic_regression.pkl",
+    "Decision Tree": "decision_tree.pkl",
+    "K-Nearest Neighbor": "k_nearest_neighbor.pkl",
+    "Naive Bayes": "naive_bayes.pkl",
+    "Random Forest": "random_forest.pkl",
+    "XGBoost": "xgboost.pkl",
+}
 
 
 def get_model(name):
@@ -81,3 +98,77 @@ def run_pipeline(df, target_col='y', model_name='XGBoost'):
         metrics["AUC"] = roc_auc_score(y_test, y_probs, multi_class='ovr')
     print(metrics,"\n",confusion_matrix(y_test, y_pred))
     return metrics, confusion_matrix(y_test, y_pred), y_test, y_pred
+
+
+def run_model(test_data, model_name, target_col="y", saved_dir=None):
+    """
+    Load test data (path to test.csv or DataFrame), load the saved .pkl for the
+    given model, predict, and compute metrics.
+
+    test_data: path to test.csv (str or Path) or DataFrame with same schema as bank_full.
+    model_name: one of get_model keys (e.g. "XGBoost", "Logistic Regression").
+    saved_dir: directory containing .pkl and artifacts (default: PROJECT_ROOT/saved_models).
+
+    Returns: metrics (dict), confusion_matrix (ndarray), y_true, y_pred.
+    """
+    if saved_dir is None:
+        saved_dir = SAVED_MODELS_DIR
+    saved_dir = Path(saved_dir)
+    if not saved_dir.exists():
+        raise FileNotFoundError(f"Saved models directory not found: {saved_dir}. Run generate_models.py first.")
+
+    if isinstance(test_data, (str, Path)):
+        df = pd.read_csv(test_data)
+    else:
+        df = pd.DataFrame(test_data)
+
+    # Apply same feature engineering as in generate_models (training data)
+    #df = apply_feature_engineering(df)
+    X_raw = df.drop(columns=[target_col])
+    y_raw = df[target_col]
+
+    # Load preprocessing artifacts
+    with open(saved_dir / "scaler.pkl", "rb") as f:
+        scaler = pickle.load(f)
+    with open(saved_dir / "label_encoder.pkl", "rb") as f:
+        le = pickle.load(f)
+    with open(saved_dir / "feature_columns.json") as f:
+        feature_columns = json.load(f)
+
+    # Same preprocessing as training: get_dummies then align to training columns
+    X_dum = pd.get_dummies(X_raw, drop_first=True)
+    for col in feature_columns:
+        if col not in X_dum.columns:
+            X_dum[col] = 0
+    X_dum = X_dum[feature_columns]
+    y_true = le.transform(y_raw.astype(str))
+    X_scaled = scaler.transform(X_dum)
+
+    # Load model and predict
+    pkl_name = MODEL_NAME_TO_PKL.get(model_name)
+    if not pkl_name:
+        raise ValueError(f"Unknown model_name: {model_name}. Use one of {list(MODEL_NAME_TO_PKL.keys())}")
+    with open(saved_dir / pkl_name, "rb") as f:
+        model = pickle.load(f)
+
+    y_pred = model.predict(X_scaled)
+    y_probs = model.predict_proba(X_scaled)
+
+    # Metrics
+    metrics = {
+        "Accuracy": accuracy_score(y_true, y_pred),
+        "Precision": precision_score(y_true, y_pred, average="weighted"),
+        "Recall": recall_score(y_true, y_pred, average="weighted"),
+        "F1": f1_score(y_true, y_pred, average="weighted"),
+        "MCC": matthews_corrcoef(y_true, y_pred),
+    }
+    if len(np.unique(y_true)) == 2:
+        metrics["AUC"] = roc_auc_score(y_true, y_probs[:, 1])
+    else:
+        metrics["AUC"] = roc_auc_score(y_true, y_probs, multi_class="ovr")
+    cm = confusion_matrix(y_true, y_pred)
+
+    print(f"Model: {model_name}")
+    print("Metrics:", metrics)
+    print("Confusion matrix:\n", cm)
+    return metrics, cm, y_true, y_pred
