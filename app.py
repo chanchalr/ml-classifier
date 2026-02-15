@@ -38,17 +38,6 @@ def add_dataset_mgmt_sidebar():
     else:
         st.sidebar.caption("dataset/ directory not found.")
 
-    st.sidebar.subheader("📤 Upload CSV")
-    uploaded = st.sidebar.file_uploader("Upload a CSV to run pipeline", type=["csv"], key="dataset_upload")
-    if uploaded is not None:
-        try:
-            df = pd.read_csv(uploaded)
-            st.sidebar.success(f"Loaded {len(df)} rows × {len(df.columns)} cols")
-            return df
-        except Exception as e:
-            st.sidebar.error(f"Could not load CSV: {e}")
-    return None
-
 
 def main():
     st.set_page_config(page_title="Bank Marketing ML", layout="wide")
@@ -65,12 +54,20 @@ def main():
         if key not in st.session_state:
             st.session_state[key] = default
 
-    # Sidebar: dataset list/download + upload
-    uploaded_df = add_dataset_mgmt_sidebar()
+    add_dataset_mgmt_sidebar()
 
-    # If we have uploaded data, run pipeline and collect metrics
+    # Run pipeline on uploaded file (upload in main area)
+    st.subheader("Run pipeline on uploaded file")
+    uploaded = st.file_uploader("Upload a CSV to run pipeline", type=["csv"], key="dataset_upload")
+    uploaded_df = None
+    if uploaded is not None:
+        try:
+            uploaded_df = pd.read_csv(uploaded)
+            st.success(f"Loaded {len(uploaded_df)} rows × {len(uploaded_df.columns)} cols")
+        except Exception as e:
+            st.error(f"Could not load CSV: {e}")
+
     if uploaded_df is not None:
-        st.subheader("Run pipeline on uploaded file")
         model_choice = st.selectbox("Model", MODEL_NAMES, key="model_choice")
         run_all = st.checkbox("Run all models and compare metrics", key="run_all_models")
 
@@ -120,7 +117,7 @@ def main():
                 st.pyplot(fig)
                 plt.close()
     else:
-        st.info("Upload a CSV in the sidebar to run the pipeline and see metrics.")
+        st.info("Upload a CSV above to run the pipeline and see metrics.")
 
 
 if __name__ == "__main__":

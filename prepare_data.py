@@ -35,6 +35,8 @@ def prepare_bank_data():
         batch_path = os.path.join(output_dir, f'bank_batch_{i+1}.csv')
         batch.to_csv(batch_path, index=False)
         print(f"Created {batch_path} - {len(batch)} rows")
+    df.to_csv(os.path.join(output_dir, 'bank_full.csv'), index=False)
+    print(f"Created {os.path.join(output_dir, 'bank_full.csv')} - {len(df)} rows")
 
     print("--- Done! ---")
 
